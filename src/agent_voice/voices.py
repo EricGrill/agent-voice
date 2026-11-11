@@ -1,8 +1,11 @@
 """The voice library: ``voices/<name>/{ref.wav, ref.txt, language.txt, persona.md}``.
 
 ``ref.wav`` is a 3-10 s clip of the voice, ``ref.txt`` its exact transcript,
-``language.txt`` the spoken language (default English), and ``persona.md``
-the optional system prompt a writer LLM uses to decide what this voice says.
+``language.txt`` the spoken language (default English), ``persona.md``
+the optional system prompt a writer LLM uses to decide what this voice says,
+and ``elevenlabs.txt`` an optional ElevenLabs voice id. When it is present
+and an ElevenLabs key is configured, ElevenLabs speaks; ``ref.wav`` is the
+OmniVoice fallback.
 """
 
 from __future__ import annotations
@@ -28,6 +31,7 @@ class Voice:
     ref_text: str
     language: str = "English"
     persona: str = DEFAULT_PERSONA
+    elevenlabs_voice_id: str = ""
 
 
 def list_voices(voices_dir: Path) -> list[str]:
@@ -58,6 +62,7 @@ def load_voice(voices_dir: Path, name: str) -> Voice:
         ref_text=ref_text.read_text(encoding="utf-8").strip(),
         language=_read(d / "language.txt", "English"),
         persona=_read(d / "persona.md", DEFAULT_PERSONA),
+        elevenlabs_voice_id=_read(d / "elevenlabs.txt", ""),
     )
 
 

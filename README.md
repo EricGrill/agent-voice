@@ -87,6 +87,12 @@ voices/skippy/
   persona.md     optional: who this voice IS -- the writer model speaks as this
 ```
 
+**ElevenLabs (optional).** Put an ElevenLabs voice id in
+`voices/<name>/elevenlabs.txt` and set `AGENT_VOICE_ELEVENLABS_API_KEY`; that
+voice is then spoken by ElevenLabs (`AGENT_VOICE_ELEVENLABS_MODEL`, default
+`eleven_flash_v2_5`). If the call fails, `ref.wav` is used through OmniVoice
+instead, so a voice still needs its reference clip.
+
 `examples/make-voice-macos.sh voices/demo` builds a throwaway voice from the
 macOS `say` command. `examples/persona-ship-ai.md` is a starting persona.
 Cutting a real clip from a recording is in [INSTALL.md](INSTALL.md#3-make-a-voice).

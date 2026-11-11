@@ -26,6 +26,8 @@ class Config:
     llm_url: str = ""  # AGENT_VOICE_LLM_URL (OpenAI-compatible base; "" = no writer)
     llm_model: str = ""  # AGENT_VOICE_LLM_MODEL
     llm_api_key: str = ""  # AGENT_VOICE_LLM_API_KEY
+    elevenlabs_api_key: str = ""  # AGENT_VOICE_ELEVENLABS_API_KEY ("" = OmniVoice only)
+    elevenlabs_model: str = "eleven_flash_v2_5"  # AGENT_VOICE_ELEVENLABS_MODEL
     num_steps: int = 10  # AGENT_VOICE_NUM_STEPS (OmniVoice diffusion steps)
     guidance_scale: float = 1.2  # AGENT_VOICE_GUIDANCE_SCALE
     max_words: int = 35  # AGENT_VOICE_MAX_WORDS (cap on a writer-produced line)

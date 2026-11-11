@@ -70,7 +70,7 @@ def _pipe(speaker: Speaker, args: argparse.Namespace) -> int:
     text = sys.stdin.read()
     spoken = speaker.speak(text, args.voice, cast(Mode, args.mode))
     if spoken:
-        print(f"[{spoken.source}] {spoken.text}")
+        print(f"[{spoken.source}/{spoken.engine}] {spoken.text}")
     return 0
 
 

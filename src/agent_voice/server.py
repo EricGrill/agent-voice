@@ -90,6 +90,7 @@ def create_server(
                     "wav": str(spoken.wav),
                     "voice": spoken.voice,
                     "source": spoken.source,
+                    "engine": spoken.engine,
                 },
             )
 

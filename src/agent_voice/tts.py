@@ -8,6 +8,8 @@ transcript, get the synthesized WAV back as base64.
 from __future__ import annotations
 
 import base64
+import io
+import wave
 from typing import Any
 
 import httpx
@@ -55,3 +57,47 @@ class TTS:
         r = self._client.post(f"{self.base_url}/synthesize", json=body)
         r.raise_for_status()
         return base64.b64decode(r.json()["audio_base64"])
+
+
+class ElevenLabsTTS:
+    """ElevenLabs text-to-speech: POST text, get 24 kHz PCM, return it as WAV."""
+
+    BASE_URL = "https://api.elevenlabs.io"
+    SAMPLE_RATE = 24000
+
+    def __init__(
+        self,
+        api_key: str,
+        *,
+        model: str = "eleven_flash_v2_5",
+        timeout: float = 30.0,
+        transport: httpx.BaseTransport | None = None,
+    ) -> None:
+        self.model = model
+        self._client = httpx.Client(
+            base_url=self.BASE_URL,
+            headers={"xi-api-key": api_key},
+            timeout=timeout,
+            transport=transport,
+        )
+
+    def synthesize(self, text: str, voice_id: str) -> bytes:
+        """Return ``text`` spoken by ElevenLabs voice ``voice_id`` as WAV bytes."""
+        r = self._client.post(
+            f"/v1/text-to-speech/{voice_id}",
+            params={"output_format": f"pcm_{self.SAMPLE_RATE}"},
+            json={"text": text, "model_id": self.model},
+        )
+        r.raise_for_status()
+        return pcm_to_wav(r.content, self.SAMPLE_RATE)
+
+
+def pcm_to_wav(pcm: bytes, sample_rate: int) -> bytes:
+    """Wrap raw mono 16-bit little-endian PCM in a WAV header."""
+    buf = io.BytesIO()
+    with wave.open(buf, "wb") as w:
+        w.setnchannels(1)
+        w.setsampwidth(2)
+        w.setframerate(sample_rate)
+        w.writeframes(pcm)
+    return buf.getvalue()
