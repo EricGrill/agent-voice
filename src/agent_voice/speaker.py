@@ -111,8 +111,9 @@ class Speaker:
         with self._lock:
             wav, engine = self._synthesize(line, voice)
             path = self._save(wav, voice.name)
-            if self.config.play if play_audio is None else play_audio:
-                play(path)
+            should_play = self.config.play if play_audio is None else play_audio
+            if should_play and play(path):
+                path.unlink()
         return Spoken(
             text=line, wav=path, voice=voice.name, source=source, engine=engine
         )

@@ -123,6 +123,9 @@ speaker = Speaker(Config.from_env())
 spoken = speaker.speak(agent_reply, "skippy")   # Spoken(text, wav, voice, source) or None
 ```
 
+With playback enabled, `spoken.wav` is deleted after successful playback. Set
+`AGENT_VOICE_PLAY=false` or use `--no-play` to keep the WAV.
+
 ## Configuration
 
 Environment variables, or the same names in `agent-voice.env` in the working
@@ -139,8 +142,8 @@ directory (the environment wins). `agent-voice doctor` shows what is in effect.
 | `AGENT_VOICE_NUM_STEPS` | `10` | OmniVoice diffusion steps (10–20 on scorbo2's server) |
 | `AGENT_VOICE_GUIDANCE_SCALE` | `1.2` | |
 | `AGENT_VOICE_MAX_WORDS` | `35` | cap on a writer-produced line |
-| `AGENT_VOICE_OUT_DIR` | `out` | where WAVs are saved |
-| `AGENT_VOICE_PLAY` | `true` | `false` to only save the WAV |
+| `AGENT_VOICE_OUT_DIR` | `out` | where WAVs are written before playback or saved with `--no-play` |
+| `AGENT_VOICE_PLAY` | `true` | play then delete the WAV; `false` to save without playing |
 | `AGENT_VOICE_HOST` / `_PORT` | `127.0.0.1` / `7161` | for `agent-voice serve` |
 
 ## Integrations
