@@ -9,20 +9,24 @@ my-agent --reply | agent-voice pipe --voice skippy
 ```
 
 ```
-[writer] Parser is fixed and all forty-one tests pass, Rico. You can stop hovering now.
+[writer/omnivoice] Parser is fixed and all forty-one tests pass, Rico. You can stop hovering now.
 ```
+
+The tag in front is `[<how the line was chosen>/<engine that spoke it>]`.
 
 - **Two channels.** The screen keeps the full technical reply. The speaker
   gets one line — either the agent tags it (`<say>...</say>`) or a small
   "writer" model reads the reply and decides what the character would say.
 - **Any agent, any language.** A CLI, a stdin pipe, and a tiny HTTP server
   (`POST /say`). Nothing to import unless you want to.
+- **Optional ElevenLabs.** Give a voice an ElevenLabs voice ID and a key, and
+  ElevenLabs speaks it, falling back to OmniVoice if the call fails.
 - **Any OmniVoice server.** Speaks the `/health` + `/synthesize` contract used
   by [scorbo2/ai-playground](https://github.com/scorbo2/ai-playground/tree/master/TTS)
   and [TalkWithMe](https://github.com/scorbo2/TalkWithMe). If you already run
   one, it works unchanged.
 - **Small.** Python 3.11+, one dependency (`httpx`), standard-library HTTP
-  server, ~600 lines, 20 tests, mypy strict.
+  server, ~650 lines, 27 tests, mypy strict.
 
 It grew out of a Claude Code session that wanted to talk as
 [Skippy](https://expeditionaryforce.fandom.com/wiki/Skippy) without a browser
@@ -85,13 +89,57 @@ voices/skippy/
   ref.txt        the exact words spoken in ref.wav
   language.txt   optional, default "English"
   persona.md     optional: who this voice IS -- the writer model speaks as this
+  elevenlabs.txt optional: an ElevenLabs voice ID (see below)
 ```
 
-**ElevenLabs (optional).** Put an ElevenLabs voice id in
-`voices/<name>/elevenlabs.txt` and set `AGENT_VOICE_ELEVENLABS_API_KEY`; that
-voice is then spoken by ElevenLabs (`AGENT_VOICE_ELEVENLABS_MODEL`, default
-`eleven_flash_v2_5`). If the call fails, `ref.wav` is used through OmniVoice
-instead, so a voice still needs its reference clip.
+## ElevenLabs (optional)
+
+A voice can be spoken by [ElevenLabs](https://elevenlabs.io) instead of your
+OmniVoice server. Both are needed:
+
+1. **A voice ID** in `voices/<name>/elevenlabs.txt` (just the ID; surrounding
+   whitespace is ignored). In ElevenLabs, add the voice to **My Voices**, then
+   use **Copy voice ID** from its menu.
+2. **An API key** in `AGENT_VOICE_ELEVENLABS_API_KEY`. A key with
+   text-to-speech access is enough.
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `AGENT_VOICE_ELEVENLABS_API_KEY` | (unset) | ElevenLabs API key; unset or empty = OmniVoice only |
+| `AGENT_VOICE_ELEVENLABS_MODEL` | `eleven_flash_v2_5` | any ElevenLabs TTS `model_id` |
+
+How it behaves:
+
+- **Which engine.** ElevenLabs speaks when the key is set **and** the voice has
+  an `elevenlabs.txt`. Every other voice, and every voice when no key is set,
+  goes to OmniVoice as before. You can mix both in one library.
+- **Request.** `POST https://api.elevenlabs.io/v1/text-to-speech/<voice id>`
+  with `output_format=pcm_24000`; the raw 24 kHz mono 16-bit PCM that comes
+  back is wrapped in a WAV header, so playback and `out/` work the same for
+  both engines. Timeout 30 s.
+- **Fallback.** If the call fails (any HTTP error status such as a bad key,
+  unknown voice or exhausted quota, a timeout, or no network), agent-voice
+  prints `elevenlabs failed: <first 200 chars of the reply>; using OmniVoice`
+  to stderr and speaks the line with the voice's `ref.wav` through OmniVoice.
+  The line is never lost to an ElevenLabs outage, which is why a voice
+  **still needs `ref.wav` and `ref.txt`**: without them it is not a voice at
+  all. If OmniVoice is down too, the error is raised as usual.
+- **Seeing which engine spoke.** `pipe` prints `[tag/elevenlabs] ...` or
+  `[tag/omnivoice] ...`; `Spoken.engine` and the Python API say the same.
+  A run of `omnivoice` with no `elevenlabs failed` line means no key reached
+  the process or the voice has no `elevenlabs.txt`.
+- **Keys.** ElevenLabs keys are 51 characters (`sk_` + 48). A truncated
+  paste is rejected with `invalid_api_key_length`. Keep the key in your
+  environment or a secrets manager rather than in `agent-voice.env`, and
+  never commit it.
+- **Cost.** Only the chosen line is sent (one or two sentences, ~100
+  characters). Flash v2.5 is ElevenLabs' cheapest model; check your plan's
+  per-character price and usage page.
+- **Voices you may use.** Use premade, Voice Library or your own designed
+  voices. Do not clone a real person's voice without their consent; that
+  breaks ElevenLabs' terms.
+
+## Making a voice
 
 `examples/make-voice-macos.sh voices/demo` builds a throwaway voice from the
 macOS `say` command. `examples/persona-ship-ai.md` is a starting persona.
@@ -107,7 +155,7 @@ curl -s localhost:7161/say -H 'content-type: application/json' \
 ```
 
 ```json
-{"spoken": "It is live. Try not to break it.", "wav": "out/skippy-20260828T025959Z.wav", "voice": "skippy", "source": "tag"}
+{"spoken": "It is live. Try not to break it.", "wav": "out/skippy-20260828T025959Z.wav", "voice": "skippy", "source": "tag", "engine": "omnivoice"}
 ```
 
 `POST /say` takes `text`, optional `voice`, optional `mode`; answers `204` when
@@ -120,7 +168,7 @@ writer failed.
 from agent_voice import Config, Speaker
 
 speaker = Speaker(Config.from_env())
-spoken = speaker.speak(agent_reply, "skippy")   # Spoken(text, wav, voice, source) or None
+spoken = speaker.speak(agent_reply, "skippy")   # Spoken(text, wav, voice, source, engine) or None
 ```
 
 ## Configuration
@@ -136,6 +184,8 @@ directory (the environment wins). `agent-voice doctor` shows what is in effect.
 | `AGENT_VOICE_LLM_URL` | (unset) | OpenAI-compatible base URL of the writer; unset = no writer |
 | `AGENT_VOICE_LLM_MODEL` | | writer model id |
 | `AGENT_VOICE_LLM_API_KEY` | | sent as `Authorization: Bearer` if set |
+| `AGENT_VOICE_ELEVENLABS_API_KEY` | (unset) | ElevenLabs key; unset = OmniVoice only ([ElevenLabs](#elevenlabs-optional)) |
+| `AGENT_VOICE_ELEVENLABS_MODEL` | `eleven_flash_v2_5` | ElevenLabs model |
 | `AGENT_VOICE_NUM_STEPS` | `10` | OmniVoice diffusion steps (10–20 on scorbo2's server) |
 | `AGENT_VOICE_GUIDANCE_SCALE` | `1.2` | |
 | `AGENT_VOICE_MAX_WORDS` | `35` | cap on a writer-produced line |
