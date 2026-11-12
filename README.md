@@ -109,7 +109,7 @@ OmniVoice server. Both are needed:
 |---|---|---|
 | `AGENT_VOICE_ELEVENLABS_API_KEY` | (unset) | ElevenLabs API key; unset or empty = OmniVoice only |
 | `AGENT_VOICE_ELEVENLABS_MODEL` | `eleven_flash_v2_5` | any ElevenLabs TTS `model_id` |
-| `AGENT_VOICE_ELEVENLABS_SPEED` | `1.0` | speaking rate, 0.7–1.2 (clamped). A voice folder can pin its own rate with `speed.txt`. 1.0 sends no voice settings, so the voice keeps its stored defaults. |
+| `AGENT_VOICE_SPEED` | `1.0` | overall speaking rate, 0.5–2.0. ElevenLabs renders up to its own 0.7–1.2 range and playback speeds up the rest (afplay `-r`, ffplay `atempo`; pitch kept). OmniVoice is sped up at playback only. A voice folder can pin its own rate with `speed.txt`. At 1.0 no voice settings are sent. |
 
 How it behaves:
 
@@ -203,7 +203,7 @@ directory (the environment wins). `agent-voice doctor` shows what is in effect.
 | `AGENT_VOICE_LLM_API_KEY` | | sent as `Authorization: Bearer` if set |
 | `AGENT_VOICE_ELEVENLABS_API_KEY` | (unset) | ElevenLabs key; unset = OmniVoice only ([ElevenLabs](#elevenlabs-optional)). Set it in the environment, not in `agent-voice.env` |
 | `AGENT_VOICE_ELEVENLABS_MODEL` | `eleven_flash_v2_5` | ElevenLabs model |
-| `AGENT_VOICE_ELEVENLABS_SPEED` | `1.0` | ElevenLabs speaking rate (0.7–1.2) |
+| `AGENT_VOICE_SPEED` | `1.0` | overall speaking rate (0.5–2.0) |
 | `AGENT_VOICE_NUM_STEPS` | `10` | OmniVoice diffusion steps (10–20 on scorbo2's server) |
 | `AGENT_VOICE_GUIDANCE_SCALE` | `1.2` | |
 | `AGENT_VOICE_MAX_WORDS` | `35` | cap on a writer-produced line |

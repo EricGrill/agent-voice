@@ -102,6 +102,19 @@ class ElevenLabsTTS:
         return pcm_to_wav(r.content, self.SAMPLE_RATE)
 
 
+def split_speed(speed: float, engine: str) -> tuple[float, float]:
+    """Split an overall ``speed`` (0.5-2.0) into (synthesis, playback) rates.
+
+    ElevenLabs renders up to its own 0.7-1.2 range; playback makes up the rest.
+    OmniVoice has no rate control, so playback does all of it.
+    """
+    speed = min(max(speed, 0.5), 2.0)
+    if engine != "elevenlabs":
+        return 1.0, speed
+    synth = min(max(speed, ElevenLabsTTS.MIN_SPEED), ElevenLabsTTS.MAX_SPEED)
+    return synth, speed / synth
+
+
 def pcm_to_wav(pcm: bytes, sample_rate: int) -> bytes:
     """Wrap raw mono 16-bit little-endian PCM in a WAV header."""
     buf = io.BytesIO()

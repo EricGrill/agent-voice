@@ -14,7 +14,7 @@ import httpx
 from agent_voice.config import Config
 from agent_voice.play import play
 from agent_voice.tags import spoken_line, strip_markup
-from agent_voice.tts import TTS, ElevenLabsTTS
+from agent_voice.tts import TTS, ElevenLabsTTS, split_speed
 from agent_voice.voices import Voice, list_voices, load_voice
 from agent_voice.writer import Writer
 
@@ -109,22 +109,25 @@ class Speaker:
             return None
         line, source = chosen
         with self._lock:
-            wav, engine = self._synthesize(line, voice)
+            speed = voice.speed or self.config.speed
+            wav, engine = self._synthesize(line, voice, speed)
             path = self._save(wav, voice.name)
             should_play = self.config.play if play_audio is None else play_audio
-            if should_play and play(path):
+            if should_play and play(path, split_speed(speed, engine)[1]):
                 path.unlink()
         return Spoken(
             text=line, wav=path, voice=voice.name, source=source, engine=engine
         )
 
-    def _synthesize(self, line: str, voice: Voice) -> tuple[bytes, str]:
+    def _synthesize(
+        self, line: str, voice: Voice, speed: float = 1.0
+    ) -> tuple[bytes, str]:
         """ElevenLabs when this voice has an id and a key is set; else OmniVoice."""
         if self.eleven is not None and voice.elevenlabs_voice_id:
             try:
-                speed = voice.speed or self.config.elevenlabs_speed
+                synth = split_speed(speed, "elevenlabs")[0]
                 return self.eleven.synthesize(
-                    line, voice.elevenlabs_voice_id, speed
+                    line, voice.elevenlabs_voice_id, synth
                 ), "elevenlabs"
             except httpx.HTTPError as e:
                 why = (

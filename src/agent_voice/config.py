@@ -28,7 +28,7 @@ class Config:
     llm_api_key: str = ""  # AGENT_VOICE_LLM_API_KEY
     elevenlabs_api_key: str = ""  # AGENT_VOICE_ELEVENLABS_API_KEY ("" = OmniVoice only)
     elevenlabs_model: str = "eleven_flash_v2_5"  # AGENT_VOICE_ELEVENLABS_MODEL
-    elevenlabs_speed: float = 1.0  # AGENT_VOICE_ELEVENLABS_SPEED, 0.7-1.2
+    speed: float = 1.0  # AGENT_VOICE_SPEED, 0.5-2.0 (voices/<name>/speed.txt wins)
     num_steps: int = 10  # AGENT_VOICE_NUM_STEPS (OmniVoice diffusion steps)
     guidance_scale: float = 1.2  # AGENT_VOICE_GUIDANCE_SCALE
     max_words: int = 35  # AGENT_VOICE_MAX_WORDS (cap on a writer-produced line)

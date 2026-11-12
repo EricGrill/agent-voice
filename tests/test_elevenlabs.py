@@ -6,8 +6,9 @@ from pathlib import Path
 import httpx
 
 from agent_voice.config import Config
+from agent_voice.play import rate_args
 from agent_voice.speaker import Speaker
-from agent_voice.tts import ElevenLabsTTS
+from agent_voice.tts import ElevenLabsTTS, split_speed
 from agent_voice.voices import load_voice
 from tests.conftest import fake_tts
 
@@ -103,7 +104,24 @@ def test_voice_speed_overrides_config(config: Config, library: Path) -> None:
     (library / "alpha" / "elevenlabs.txt").write_text("voice123")
     (library / "alpha" / "speed.txt").write_text("0.9\n")
     eleven: list[httpx.Request] = []
-    cfg = Config(**{**eleven_config(config).__dict__, "elevenlabs_speed": 1.2})
+    cfg = Config(**{**eleven_config(config).__dict__, "speed": 1.2})
     s = Speaker(cfg, tts_transport=fake_tts([]), eleven_transport=fake_eleven(eleven))
     s.speak("<say>Hello.</say>")
     assert json.loads(eleven[0].content)["voice_settings"] == {"speed": 0.9}
+
+
+def test_split_speed() -> None:
+    assert split_speed(1.0, "elevenlabs") == (1.0, 1.0)
+    assert split_speed(1.1, "elevenlabs") == (1.1, 1.0)
+    synth, rate = split_speed(1.5, "elevenlabs")
+    assert synth == 1.2 and abs(rate - 1.25) < 1e-9
+    assert split_speed(0.6, "elevenlabs") == (0.7, 0.6 / 0.7)
+    assert split_speed(1.5, "omnivoice") == (1.0, 1.5)
+    assert split_speed(5.0, "omnivoice") == (1.0, 2.0)
+
+
+def test_rate_args() -> None:
+    assert rate_args(["/usr/bin/afplay"], 1.0) == []
+    assert rate_args(["/usr/bin/afplay"], 1.25) == ["-r", "1.250", "-q", "1"]
+    assert rate_args(["/x/ffplay", "-nodisp"], 1.5) == ["-af", "atempo=1.500"]
+    assert rate_args(["/usr/bin/paplay"], 1.5) == []

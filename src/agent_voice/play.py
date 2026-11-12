@@ -24,8 +24,24 @@ def find_player() -> list[str] | None:
     return None
 
 
-def play(path: Path) -> bool:
-    """Play ``path`` synchronously; return False if no player is available."""
+def rate_args(argv: list[str], rate: float) -> list[str]:
+    """Extra player arguments to play ``rate`` times faster, pitch kept.
+
+    afplay (time-pitch, high quality) and ffplay (atempo) support it; other
+    players play at normal speed.
+    """
+    if abs(rate - 1.0) < 0.01:
+        return []
+    name = Path(argv[0]).name
+    if name == "afplay":
+        return ["-r", f"{rate:.3f}", "-q", "1"]
+    if name == "ffplay":
+        return ["-af", f"atempo={rate:.3f}"]
+    return []
+
+
+def play(path: Path, rate: float = 1.0) -> bool:
+    """Play ``path`` synchronously at ``rate``; False if no player is available."""
     if sys.platform == "win32":
         import winsound
 
@@ -34,5 +50,5 @@ def play(path: Path) -> bool:
     argv = find_player()
     if argv is None:
         return False
-    subprocess.run([*argv, str(path)], check=False)
+    subprocess.run([*argv, *rate_args(argv, rate), str(path)], check=False)
     return True
