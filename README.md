@@ -76,8 +76,10 @@ writer model — is in **[INSTALL.md](INSTALL.md)**.
    plenty — a 9B on a laptop writes the line in ~2.5 s.
 3. **Direct.** Otherwise the text itself is spoken, markup stripped.
 
-`--mode tag|writer|direct` forces one of them. Utterances are serialized, so
-two agents talking at once take turns instead of overlapping.
+`--mode tag|writer|direct` forces one of them. Utterances are serialized
+inside one process, so agents sharing one `agent-voice serve` (or one Python
+`Speaker`) take turns. Separate `agent-voice pipe` processes do not share that
+lock and can talk over each other.
 
 ## Voices
 
@@ -97,8 +99,8 @@ voices/skippy/
 A voice can be spoken by [ElevenLabs](https://elevenlabs.io) instead of your
 OmniVoice server. Both are needed:
 
-1. **A voice ID** in `voices/<name>/elevenlabs.txt` (just the ID; surrounding
-   whitespace is ignored). In ElevenLabs, add the voice to **My Voices**, then
+1. **A voice ID** in a non-empty `voices/<name>/elevenlabs.txt` (just the ID;
+   surrounding whitespace is ignored; an empty file means OmniVoice). In ElevenLabs, add the voice to **My Voices**, then
    use **Copy voice ID** from its menu.
 2. **An API key** in `AGENT_VOICE_ELEVENLABS_API_KEY`. A key with
    text-to-speech access is enough.
@@ -111,7 +113,7 @@ OmniVoice server. Both are needed:
 How it behaves:
 
 - **Which engine.** ElevenLabs speaks when the key is set **and** the voice has
-  an `elevenlabs.txt`. Every other voice, and every voice when no key is set,
+  a non-empty `elevenlabs.txt`. Every other voice, and every voice when no key is set,
   goes to OmniVoice as before. You can mix both in one library.
 - **Request.** `POST https://api.elevenlabs.io/v1/text-to-speech/<voice id>`
   with `output_format=pcm_24000`; the raw 24 kHz mono 16-bit PCM that comes
@@ -119,22 +121,33 @@ How it behaves:
   both engines. Timeout 30 s.
 - **Fallback.** If the call fails (any HTTP error status such as a bad key,
   unknown voice or exhausted quota, a timeout, or no network), agent-voice
-  prints `elevenlabs failed: <first 200 chars of the reply>; using OmniVoice`
-  to stderr and speaks the line with the voice's `ref.wav` through OmniVoice.
+  prints `elevenlabs failed: <reason>; using OmniVoice` to stderr. The reason
+  is the first 200 characters of ElevenLabs' error response for an HTTP
+  error, or the exception text for a timeout or network failure. It then
+  speaks the line with the voice's `ref.wav` through OmniVoice.
   The line is never lost to an ElevenLabs outage, which is why a voice
   **still needs `ref.wav` and `ref.txt`**: without them it is not a voice at
   all. If OmniVoice is down too, the error is raised as usual.
 - **Seeing which engine spoke.** `pipe` prints `[tag/elevenlabs] ...` or
-  `[tag/omnivoice] ...`; `Spoken.engine` and the Python API say the same.
-  A run of `omnivoice` with no `elevenlabs failed` line means no key reached
-  the process or the voice has no `elevenlabs.txt`.
-- **Keys.** ElevenLabs keys are 51 characters (`sk_` + 48). A truncated
-  paste is rejected with `invalid_api_key_length`. Keep the key in your
+  `[tag/omnivoice] ...`; `POST /say` returns it in the `engine` field, and the
+  Python API in `Spoken.engine`. `speak` prints only the WAV path. A run of
+  `omnivoice` with no `elevenlabs failed` line means no key reached the
+  process or the voice has no (or an empty) `elevenlabs.txt`. `doctor` does
+  not check ElevenLabs.
+- **Keys.** At the time of writing, ElevenLabs keys are 51 characters
+  (`sk_` + 48), and a truncated paste is rejected with
+  `invalid_api_key_length`. Check a key's length, never print it. Keep the key in your
   environment or a secrets manager rather than in `agent-voice.env`, and
   never commit it.
-- **Cost.** Only the chosen line is sent (one or two sentences, ~100
-  characters). Flash v2.5 is ElevenLabs' cheapest model; check your plan's
+- **Cost.** Only the chosen line is sent. A `<say>` line is capped at 300
+  characters and is usually about 100. Direct mode (`agent-voice speak`,
+  `--mode direct`, or `pipe`/`/say` on a reply with no `<say>` tag and no
+  writer) sends up to 600 characters, so it is the expensive path. Flash
+  v2.5 is one of ElevenLabs' low-cost models; check your plan's
   per-character price and usage page.
+- **`serve` has no authentication.** With a key set, anyone who can reach
+  `POST /say` spends your ElevenLabs quota. Keep `AGENT_VOICE_HOST` on
+  `127.0.0.1`, or put the server behind something that authenticates.
 - **Voices you may use.** Use premade, Voice Library or your own designed
   voices. Do not clone a real person's voice without their consent; that
   breaks ElevenLabs' terms.
@@ -187,7 +200,7 @@ directory (the environment wins). `agent-voice doctor` shows what is in effect.
 | `AGENT_VOICE_LLM_URL` | (unset) | OpenAI-compatible base URL of the writer; unset = no writer |
 | `AGENT_VOICE_LLM_MODEL` | | writer model id |
 | `AGENT_VOICE_LLM_API_KEY` | | sent as `Authorization: Bearer` if set |
-| `AGENT_VOICE_ELEVENLABS_API_KEY` | (unset) | ElevenLabs key; unset = OmniVoice only ([ElevenLabs](#elevenlabs-optional)) |
+| `AGENT_VOICE_ELEVENLABS_API_KEY` | (unset) | ElevenLabs key; unset = OmniVoice only ([ElevenLabs](#elevenlabs-optional)). Set it in the environment, not in `agent-voice.env` |
 | `AGENT_VOICE_ELEVENLABS_MODEL` | `eleven_flash_v2_5` | ElevenLabs model |
 | `AGENT_VOICE_NUM_STEPS` | `10` | OmniVoice diffusion steps (10–20 on scorbo2's server) |
 | `AGENT_VOICE_GUIDANCE_SCALE` | `1.2` | |
