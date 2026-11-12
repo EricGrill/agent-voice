@@ -31,6 +31,30 @@ def test_tag_beats_writer(config: Config) -> None:
     assert spoken.wav.is_file() and spoken.wav.parent == config.out_dir
 
 
+def test_played_wav_is_deleted(config: Config, monkeypatch: pytest.MonkeyPatch) -> None:
+    played: list[Path] = []
+
+    def fake_play(path: Path) -> bool:
+        assert path.is_file()
+        played.append(path)
+        return True
+
+    monkeypatch.setattr("agent_voice.speaker.play", fake_play)
+    s = Speaker(Config(**{**config.__dict__, "play": True}), tts_transport=fake_tts([]))
+    spoken = s.speak("<say>Tagged line.</say>")
+    assert spoken is not None and played == [spoken.wav]
+    assert not spoken.wav.exists()
+
+
+def test_wav_is_kept_without_a_player(
+    config: Config, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr("agent_voice.speaker.play", lambda _path: False)
+    s = Speaker(Config(**{**config.__dict__, "play": True}), tts_transport=fake_tts([]))
+    spoken = s.speak("<say>Tagged line.</say>")
+    assert spoken is not None and spoken.wav.is_file()
+
+
 def test_writer_when_no_tag(config: Config) -> None:
     tts: list[dict] = []
     llm: list[dict] = []
