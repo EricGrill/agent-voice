@@ -81,12 +81,22 @@ class ElevenLabsTTS:
             transport=transport,
         )
 
-    def synthesize(self, text: str, voice_id: str) -> bytes:
-        """Return ``text`` spoken by ElevenLabs voice ``voice_id`` as WAV bytes."""
+    MIN_SPEED, MAX_SPEED = 0.7, 1.2  # ElevenLabs' allowed speaking-rate range
+
+    def synthesize(self, text: str, voice_id: str, speed: float = 1.0) -> bytes:
+        """Return ``text`` spoken by ElevenLabs voice ``voice_id`` as WAV bytes.
+
+        ``speed`` is clamped to 0.7-1.2; 1.0 sends no voice settings at all, so
+        the voice keeps its stored defaults.
+        """
+        body: dict[str, object] = {"text": text, "model_id": self.model}
+        speed = min(max(speed, self.MIN_SPEED), self.MAX_SPEED)
+        if speed != 1.0:
+            body["voice_settings"] = {"speed": speed}
         r = self._client.post(
             f"/v1/text-to-speech/{voice_id}",
             params={"output_format": f"pcm_{self.SAMPLE_RATE}"},
-            json={"text": text, "model_id": self.model},
+            json=body,
         )
         r.raise_for_status()
         return pcm_to_wav(r.content, self.SAMPLE_RATE)

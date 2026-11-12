@@ -32,6 +32,7 @@ class Voice:
     language: str = "English"
     persona: str = DEFAULT_PERSONA
     elevenlabs_voice_id: str = ""
+    speed: float | None = None  # speed.txt: ElevenLabs speaking rate, 0.7-1.2
 
 
 def list_voices(voices_dir: Path) -> list[str]:
@@ -63,7 +64,15 @@ def load_voice(voices_dir: Path, name: str) -> Voice:
         language=_read(d / "language.txt", "English"),
         persona=_read(d / "persona.md", DEFAULT_PERSONA),
         elevenlabs_voice_id=_read(d / "elevenlabs.txt", ""),
+        speed=_read_speed(d / "speed.txt"),
     )
+
+
+def _read_speed(path: Path) -> float | None:
+    try:
+        return float(_read(path, ""))
+    except ValueError:
+        return None
 
 
 def _read(path: Path, default: str) -> str:

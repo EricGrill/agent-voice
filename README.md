@@ -109,6 +109,7 @@ OmniVoice server. Both are needed:
 |---|---|---|
 | `AGENT_VOICE_ELEVENLABS_API_KEY` | (unset) | ElevenLabs API key; unset or empty = OmniVoice only |
 | `AGENT_VOICE_ELEVENLABS_MODEL` | `eleven_flash_v2_5` | any ElevenLabs TTS `model_id` |
+| `AGENT_VOICE_ELEVENLABS_SPEED` | `1.0` | speaking rate, 0.7–1.2 (clamped). A voice folder can pin its own rate with `speed.txt`. 1.0 sends no voice settings, so the voice keeps its stored defaults. |
 
 How it behaves:
 
@@ -202,6 +203,7 @@ directory (the environment wins). `agent-voice doctor` shows what is in effect.
 | `AGENT_VOICE_LLM_API_KEY` | | sent as `Authorization: Bearer` if set |
 | `AGENT_VOICE_ELEVENLABS_API_KEY` | (unset) | ElevenLabs key; unset = OmniVoice only ([ElevenLabs](#elevenlabs-optional)). Set it in the environment, not in `agent-voice.env` |
 | `AGENT_VOICE_ELEVENLABS_MODEL` | `eleven_flash_v2_5` | ElevenLabs model |
+| `AGENT_VOICE_ELEVENLABS_SPEED` | `1.0` | ElevenLabs speaking rate (0.7–1.2) |
 | `AGENT_VOICE_NUM_STEPS` | `10` | OmniVoice diffusion steps (10–20 on scorbo2's server) |
 | `AGENT_VOICE_GUIDANCE_SCALE` | `1.2` | |
 | `AGENT_VOICE_MAX_WORDS` | `35` | cap on a writer-produced line |

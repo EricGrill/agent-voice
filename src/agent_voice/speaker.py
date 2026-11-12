@@ -122,8 +122,9 @@ class Speaker:
         """ElevenLabs when this voice has an id and a key is set; else OmniVoice."""
         if self.eleven is not None and voice.elevenlabs_voice_id:
             try:
+                speed = voice.speed or self.config.elevenlabs_speed
                 return self.eleven.synthesize(
-                    line, voice.elevenlabs_voice_id
+                    line, voice.elevenlabs_voice_id, speed
                 ), "elevenlabs"
             except httpx.HTTPError as e:
                 why = (

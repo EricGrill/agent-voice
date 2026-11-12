@@ -1,4 +1,5 @@
 import io
+import json
 import wave
 from pathlib import Path
 
@@ -84,3 +85,25 @@ def test_no_key_means_omnivoice(config: Config, library: Path) -> None:
     )
     spoken = s.speak("<say>Hello.</say>")
     assert spoken is not None and spoken.engine == "omnivoice" and eleven == []
+
+
+def test_speed_sent_and_clamped() -> None:
+    calls: list[httpx.Request] = []
+    tts = ElevenLabsTTS("k", transport=fake_eleven(calls))
+    tts.synthesize("Hi.", "v1")
+    tts.synthesize("Hi.", "v1", 1.15)
+    tts.synthesize("Hi.", "v1", 3.0)
+    bodies = [json.loads(c.content) for c in calls]
+    assert "voice_settings" not in bodies[0]
+    assert bodies[1]["voice_settings"] == {"speed": 1.15}
+    assert bodies[2]["voice_settings"] == {"speed": 1.2}
+
+
+def test_voice_speed_overrides_config(config: Config, library: Path) -> None:
+    (library / "alpha" / "elevenlabs.txt").write_text("voice123")
+    (library / "alpha" / "speed.txt").write_text("0.9\n")
+    eleven: list[httpx.Request] = []
+    cfg = Config(**{**eleven_config(config).__dict__, "elevenlabs_speed": 1.2})
+    s = Speaker(cfg, tts_transport=fake_tts([]), eleven_transport=fake_eleven(eleven))
+    s.speak("<say>Hello.</say>")
+    assert json.loads(eleven[0].content)["voice_settings"] == {"speed": 0.9}
